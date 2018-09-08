@@ -1,0 +1,27 @@
+{
+  "extends": "tslint:latest",
+  "rules": {
+    "await-promise": [true, "Thenable", "PromiseLike", "Bluebird"],
+    "strict-boolean-expressions": [
+      false,
+      "allow-null-union",
+      "allow-undefined-union",
+      "allow-string",
+      "allow-number",
+      "allow-boolean-or-undefined"
+    ],
+    "interface-name": false,
+    "no-empty-interface": true,
+    "adjacent-overload-signatures": true,
+    "no-implicit-dependencies": false,
+    "max-line-length": [true, 120],
+    "object-literal-sort-keys": false,
+    "no-console": false,
+    "no-object-literal-type-assertion": false,
+    "forin": false,
+    "no-this-assignment": false,
+    "promise-function-async": true,
+    "no-floating-promises": true,
+    "quotemark": [true, "single"]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://schemastore.azurewebsites.net/schemas/json/package.json",
+  "name": "certbot-cf-wrapper-api",
+  "readme": "README.md",
+  "maintainers": [
+    "sammons"
+  ],
+  "version": "1.0.0",
+  "engines": {
+    "node": "8.x.x"
+  },
+  "description": "wrapper for certbot-cloudflare with a typescript/node daemon",
+  "main": "built/src/index.js",
+  "types": "built/src/index.d.ts",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "github.com/sammons/certbot-cloudflare-wrapper"
+  },
+  "author": "sammons",
+  "license": "MIT",
+  "dependencies": {
+    "dockerode": "^2.5.6",
+    "express": "^4.16.3",
+    "lodash": "^4.17.10",
+    "sammons-logger": "^1.0.2"
+  },
+  "devDependencies": {
+    "@types/dockerode": "^2.5.5",
+    "@types/express": "^4.16.0",
+    "@types/lodash": "^4.14.116",
+    "@types/mocha": "^5.2.5",
+    "mocha": "^5.2.0",
+    "tslint": "^5.11.0",
+    "typescript": "^3.0.3"
+  }
+}
