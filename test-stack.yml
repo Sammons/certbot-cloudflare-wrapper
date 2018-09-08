@@ -1,0 +1,9 @@
+version: '3'
+
+services:
+  test: 
+    image: sammons/certbot-cloudflare-wrapper:latest
+    volumes:
+      - ./config.json:/app/config.json
+      - ./logs:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock
