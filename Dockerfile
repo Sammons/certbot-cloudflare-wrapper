@@ -14,4 +14,8 @@ RUN node /usr/local/lib/node_modules/npm/bin/npm-cli.js install -g npm
 
 WORKDIR /app
 
+COPY src package.json package-lock.json tsconfig.json /app/
 
+RUN npm install --no-optional && npm run build
+
+ENTRYPOINT [ "node", "built/index" ]

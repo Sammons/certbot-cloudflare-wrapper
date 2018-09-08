@@ -2,7 +2,10 @@ import * as child_process from 'child_process';
 import * as crypto from 'crypto';
 import * as dockerode from 'dockerode';
 import * as express from 'express';
+import * as fs from 'fs';
 import * as _ from 'lodash';
+import * as path from 'path';
+import * as util from 'util';
 import { config } from './config';
 import { logger } from './logging';
 
@@ -12,6 +15,10 @@ export class App {
     return new dockerode({
       socketPath: config.socketPath as string,
     });
+  }
+
+  get credentialFile() {
+    return path.resolve(`${process.cwd()}/credentials.txt`);
   }
 
   public actions: Array<{
@@ -41,6 +48,8 @@ export class App {
       });
     });
   }
+  // TODO: extract secrets back out of the file system
+  // TODO: update affected services with those secrets
 
   public async apply() {
     for (const domain of config.domains) {
@@ -56,16 +65,25 @@ export class App {
       logger.info(`Acquiring/Renewing domain ${domain}`);
       try {
         child_process.execSync(
-          `certbot certonly --dns-cloudflare -n --agree-tos -m ${config.email} -d "${domain}"` +
-          ` --dns-cloudflare-credentials=$credential_file`,
+          `certbot certonly` +
+            ` --dns-cloudflare -n --agree-tos -m ${config.email} -d "${domain}"` +
+            config.staging ? ` --staging ` : `` +
+            ` --dns-cloudflare-credentials=${this.credentialFile}`, {
+            stdio: 'ignore',
+          },
         );
+        logger.info(`Completed executing certbot command`);
       } catch (error) {
-
+        logger.error(`Failed to run certbot for domain ${domain}`, error);
       }
     }
   }
 
   public async run() {
+    await util.promisify(fs.writeFile)(this.credentialFile, [
+      `dns_cloudflare_email = ${config.email}`,
+      `dns_cloudflare_api_key = ${config.cloudflareKey}`,
+    ]);
     const server = express();
     server.get('/health', (req, res) => {
       res.end({

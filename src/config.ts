@@ -33,6 +33,8 @@ export const config = {
   domains: access(parsedConfig, 'domains') as any as string[],
   socketPath: access(parsedConfig, 'socketPath'),
   email: access(parsedConfig, 'email'),
+  cloudflareKey: access(parsedConfig, 'cloudflareKey'),
+  staging: access(parsedConfig, 'staging'),
 };
 const validate = () => {
   if (keysMissing.length > 0) {

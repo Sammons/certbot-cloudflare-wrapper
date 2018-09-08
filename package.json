@@ -12,7 +12,11 @@
   "description": "wrapper for certbot-cloudflare with a typescript/node daemon",
   "main": "built/src/index.js",
   "types": "built/src/index.d.ts",
-  "scripts": {},
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf built",
+    "build-docker": "docker build . -t sammons/certbot-cloudflare-wrapper"
+  },
   "repository": {
     "type": "git",
     "url": "github.com/sammons/certbot-cloudflare-wrapper"
