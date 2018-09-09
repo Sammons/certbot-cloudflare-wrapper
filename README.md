@@ -22,3 +22,16 @@ Eventually would like to:
 * switch off directly mounting secrets and to using something like hashicorp vault.
 
 For long term persistence, mount `/etc/letsencrypt/live` within this container. Certbot automatically stores keys there.
+
+Exposes a `GET` endpoint `/history` which returns the most recent last 100 entries in the history file (`/app/history/history.txt`)
+
+each entry is an `action`:
+
+```
+const action = {
+  serviceId: service.ID,
+  serviceName,
+  oldSecrets,
+  newSecrets,
+};
+```

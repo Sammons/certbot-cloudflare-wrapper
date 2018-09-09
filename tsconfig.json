@@ -17,6 +17,10 @@
     "types": [
       "mocha",
       "node"
+    ],
+    "lib": [
+      "es2018",
+      "es2018.promise"
     ]
   },
   "exclude": [

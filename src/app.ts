@@ -13,7 +13,59 @@ import { logger } from './logging';
 const fsp = {
   readFile: util.promisify(fs.readFile),
   exists: util.promisify(fs.exists),
+  appendFile: util.promisify(fs.appendFile),
+  stat: util.promisify(fs.stat),
+  open: util.promisify(fs.open),
+};
 
+if (!fs.existsSync(`./history`)) {
+  fs.mkdirSync(`./history`);
+}
+const historyFilePath = `./history/history.txt`;
+if (!fs.existsSync(historyFilePath)) {
+  fs.writeFileSync(historyFilePath, '');
+}
+// maybe not the best reverse-stream ever, but this does not need to be fast
+const readLinesFromHistoryFile = async (count: number): Promise<string[]> => {
+  const resultLines: string[] = [];
+  // stat the file
+  const stats = await fsp.stat(historyFilePath);
+  const readFrame = async (lastStagger: string, start: number, end: number) => {
+    const part: Buffer = await new Promise<Buffer>((resolve, reject) => {
+      const stream = fs.createReadStream(historyFilePath, {
+        start, end,
+      });
+      stream.on('error', reject);
+      const pieces: Buffer[] = [];
+      stream.on('data', (chunk: Buffer) => {
+        pieces.push(chunk);
+      });
+      stream.on('close', () => {
+        resolve(Buffer.concat([...pieces, Buffer.from(lastStagger, 'utf8')]));
+      });
+    });
+    const lines = part.toString('utf8').split(/\n/gm);
+    const currentStagger = lines.shift() || '';
+    return {
+      stagger: currentStagger,
+      lines,
+    };
+  };
+  const chunkSize = 16 * 1024; // 16kb
+  let curStart = stats.size - chunkSize;
+  if (curStart < 0) {
+    curStart = 0;
+  }
+  let curEnd = stats.size;
+  let stagger = '';
+  while (curStart >= 0 && resultLines.length < count) {
+    const result = await readFrame(stagger, curStart, curEnd);
+    stagger = result.stagger;
+    resultLines.unshift(...result.lines);
+    curEnd = curStart - 1;
+    curStart -= chunkSize;
+  }
+  return resultLines.slice(-count);
 };
 
 export class App {
@@ -33,6 +85,7 @@ export class App {
     action: string;
     domain: string;
   }> = [];
+
   // the provisioner library uses md5 on domain keys to determine their suffix
   public md5(s: string) {
     return crypto.createHash('md5').update(s.trim()).digest('hex');
@@ -89,7 +142,7 @@ export class App {
       domain,
       secrets: [crtSecretName, pemSecretName],
     });
-    await Promise.all([
+    const [crtCreated, pemCreated] = await Promise.all([
       this.dockerode.createSecret({
         Name: crtSecretName,
         Data: crt.toString('base64'),
@@ -99,13 +152,27 @@ export class App {
         Data: pem.toString('base64'),
       }),
     ]);
-    logger.info(`Successfully created secrets for domain ${domain}`);
+    logger.info(`Successfully created secrets for domain ${domain}`, {
+      crtSecretName, pemSecretName,
+    });
     return {
+      crtCreatedId: crtCreated.id,
+      pemCreatedId: pemCreated.id,
       crtSecretName,
       pemSecretName,
       crtSuffix,
       pemSuffix,
     };
+  }
+
+  public async appendAction(action: {
+    serviceId: string;
+    serviceName: string;
+    oldSecrets: Array<{ secretId: string; secretName: string; }>;
+    newSecrets: Array<{ secretId: string; secretName: string; }>;
+    timestamp: string;
+  }) {
+    await fsp.appendFile(historyFilePath, JSON.stringify(action) + '\n');
   }
 
   public async apply() {
@@ -122,16 +189,16 @@ export class App {
       logger.info(`Acquiring/Renewing domain ${domain}`);
       try {
         const stagingFlag = config.staging ? ` --staging ` : ``;
-        await new Promise((resolve, reject) => {
+        await new Promise((res, rej) => {
           child_process.exec(
             `certbot certonly --dns-cloudflare -n --agree-tos ${stagingFlag} -m ${config.email} -d "${domain}" ` +
             ` --dns-cloudflare-credentials=${this.credentialFile}`, {
               shell: '/bin/sh',
             }, (error, stdout, stderr) => {
               if (error) {
-                reject(error);
+                rej(error);
               } else {
-                resolve({
+                res({
                   stdout, stderr,
                 });
               }
@@ -156,36 +223,60 @@ export class App {
             secrets,
           });
           let somethingUpdated = false;
+          // for audit trail
+          const oldSecrets = new Array<{ secretId: string; secretName: string; }>();
+          const newSecrets = new Array<{ secretId: string; secretName: string; }>();
           secrets.forEach((secret: { SecretName: string; SecretID: string; }) => {
             if (secret.SecretName.endsWith(domainSecrets.crtSuffix)) {
               somethingUpdated = true;
               logger.info(
                 `Replacing ${secret.SecretName} with ${domainSecrets.crtSecretName} on service ${serviceName}`,
               );
-              delete secret.SecretID;
+              oldSecrets.push({
+                secretId: secret.SecretID,
+                secretName: secret.SecretName,
+              });
               secret.SecretName = domainSecrets.crtSecretName;
+              secret.SecretID = domainSecrets.crtCreatedId;
+              newSecrets.push({
+                secretId: secret.SecretID,
+                secretName: secret.SecretName,
+              });
             }
             if (secret.SecretName.endsWith(domainSecrets.pemSuffix)) {
               somethingUpdated = true;
               logger.info(
                 `Replacing ${secret.SecretName} with ${domainSecrets.pemSecretName} on service ${serviceName}`,
               );
-              delete secret.SecretID;
+              oldSecrets.push({
+                secretId: secret.SecretID,
+                secretName: secret.SecretName,
+              });
+              secret.SecretID = domainSecrets.pemCreatedId;
               secret.SecretName = domainSecrets.pemSecretName;
+              newSecrets.push({
+                secretId: secret.SecretID,
+                secretName: secret.SecretName,
+              });
             }
           });
           if (somethingUpdated) {
-            logger.info(`Applying the modifications, changing service` +
-              ` from version ${service.Version.Index} to ${service.Version.Index + 1}...`);
-            service.Version.Index += 1;
-            service.version = service.Version.Index;
+            logger.info(`Applying the modifications, changing service at version ${service.Version.Index}`);
+            const latestService = await this.dockerode.getService(service.ID).inspect();
+            latestService.Spec.TaskTemplate.ContainerSpec.Secrets = secrets;
             await this.dockerode.getService(service.ID).update({
-              ID: service.ID,
+              ...latestService.Spec,
               version: service.Version.Index,
-              TaskTemplate: {
-                ContainerSpec: service.TaskTemplate.ContainerSpec,
-              },
             });
+            logger.info(`Updated service ${serviceName}`);
+            const action = {
+              serviceId: service.ID,
+              serviceName,
+              oldSecrets,
+              newSecrets,
+              timestamp: new Date().toISOString(),
+            };
+            await this.appendAction(action);
           } else {
             logger.info(`No changes detected.`);
           }
@@ -196,7 +287,6 @@ export class App {
       }
     }
   }
-
   public async run() {
     await util.promisify(fs.writeFile)(this.credentialFile, [
       `dns_cloudflare_email = ${config.email}`,
@@ -205,11 +295,19 @@ export class App {
         mode: '0400',
       });
     const server = express();
-    server.get('/health', (req, res) => {
-      res.end({
-        healthy: true,
-        managing: config.domains,
-      });
+    server.get('/history', async (req, res) => {
+      try {
+        const history = (await readLinesFromHistoryFile(100));
+        console.log('History');
+        res.json(
+          history.filter((l) => l.trim().length > 0).map((l) => JSON.parse(l)),
+        );
+      } catch (e) {
+        res.status(500).json({
+          message: e.message,
+          stack: e.stack.split('\n'),
+        });
+      }
     });
     server.listen(config.port, () => {
       logger.info('listening on port', { port: config.port });
