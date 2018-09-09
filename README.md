@@ -35,3 +35,7 @@ const action = {
   newSecrets,
 };
 ```
+
+Runs every 6 hours. Will only kick over services if a new cert is created which would be due to a cert imminently expiring.
+
+Does not check for services that are out of date, it just updates affected services every time it runs, and a new cert is obtained for the given domain.

@@ -16,4 +16,5 @@ services:
       - ./config.json:/app/config.json
       - ./logs:/app/logs
       - ./history:/app/history
+      - ./certs:/etc/letsencrypt
       - /var/run/docker.sock:/var/run/docker.sock

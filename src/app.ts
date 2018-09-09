@@ -134,6 +134,12 @@ export class App {
       logger.warn(`File ${pemPath} does not exist! Not cerating secrets for domain ${domain}`);
       return;
     }
+    const crtStats = await fsp.stat(crtPath);
+    // check if cert created in the last 5 minutes
+    if ((new Date().getTime() - crtStats.ctime.getTime()) > (1000 * 60 * 5)) {
+      logger.info(`Skipping creating a new secret for ${domain} since the cert is not new`);
+      return;
+    }
     const crt = await fsp.readFile(crtPath);
     const pem = await fsp.readFile(pemPath);
     const crtSecretName = `${prefix}_external_secret_${crtSuffix}`;
@@ -313,6 +319,13 @@ export class App {
       logger.info('listening on port', { port: config.port });
     });
     this.apply();
+    const scheduleNext = () => {
+      setTimeout(() => {
+        this.apply();
+        process.nextTick(scheduleNext);
+      }, 6 /* hour */ * 60 /* min */ * 60 /* sec */ * 1000 /* ms */);
+    };
+    scheduleNext();
   }
 
   private async secrets(domain: string) {
