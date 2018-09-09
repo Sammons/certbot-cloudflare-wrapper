@@ -1,3 +1,5 @@
+Updates docker swarm members managed by sammons/provisioner
+
 Mounts /app/config.json
 
 ```json
@@ -21,7 +23,7 @@ Eventually would like to:
 * consider the time of day/load of services as it prepares to impact them, since an update kicks over all of the services
 * switch off directly mounting secrets and to using something like hashicorp vault.
 
-For long term persistence, mount `/etc/letsencrypt/live` within this container. Certbot automatically stores keys there.
+For long term persistence, mount `/etc/letsencrypt` within this container. Certbot automatically stores keys there.
 
 Exposes a `GET` endpoint `/history` which returns the most recent last 100 entries in the history file (`/app/history/history.txt`)
 
