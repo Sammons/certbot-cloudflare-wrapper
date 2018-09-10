@@ -118,7 +118,7 @@ export class App {
   public async extractSecrets(domain: string) {
     const prefix = crypto.randomBytes(3).toString('hex').toUpperCase();
     const crtSuffix = this.md5(`${domain}.crt`);
-    const pemSuffix = this.md5(`${domain}.pem`);
+    const pemSuffix = this.md5(`${domain}.key`);
     const domainDir = `/etc/letsencrypt/live/${domain}`;
     const crtPath = path.resolve(`${domainDir}/fullchain.pem`);
     const pemPath = path.resolve(`${domainDir}/privkey.pem`);
@@ -345,7 +345,7 @@ export class App {
   private async secrets(domain: string) {
     const suffixes = {
       crt: this.md5(`${domain}.crt`),
-      key: this.md5(`${domain}.pem`),
+      key: this.md5(`${domain}.key`),
     };
     const secrets = await this.dockerode.listSecrets();
     return _.filter(secrets, (s) => {
