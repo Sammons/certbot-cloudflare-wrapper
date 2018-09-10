@@ -267,22 +267,33 @@ export class App {
             }
           });
           if (somethingUpdated) {
-            logger.info(`Applying the modifications, changing service at version ${service.Version.Index}`);
-            const latestService = await this.dockerode.getService(service.ID).inspect();
-            latestService.Spec.TaskTemplate.ContainerSpec.Secrets = secrets;
-            await this.dockerode.getService(service.ID).update({
-              ...latestService.Spec,
-              version: service.Version.Index,
-            });
-            logger.info(`Updated service ${serviceName}`);
-            const action = {
-              serviceId: service.ID,
-              serviceName,
-              oldSecrets,
-              newSecrets,
-              timestamp: new Date().toISOString(),
+            logger.info(`Attempting to apply the modifications, changing service at version ${service.Version.Index}`);
+            const attemptUpdate = async () => {
+              const latestService = await this.dockerode.getService(service.ID).inspect();
+              latestService.Spec.TaskTemplate.ContainerSpec.Secrets = secrets;
+              await this.dockerode.getService(service.ID).update({
+                ...latestService.Spec,
+                version: Number(service.Version.Index),
+              });
+              logger.info(`Updated service ${serviceName}`);
             };
-            await this.appendAction(action);
+            let count = 0;
+            while (count < 3) {
+              try {
+                await attemptUpdate();
+                const action = {
+                  serviceId: service.ID,
+                  serviceName,
+                  oldSecrets,
+                  newSecrets,
+                  timestamp: new Date().toISOString(),
+                };
+                await this.appendAction(action);
+              } catch (error) {
+                logger.error(`Failed to apply change to service ${serviceName}`);
+              }
+              count++;
+            }
           } else {
             logger.info(`No changes detected.`);
           }
