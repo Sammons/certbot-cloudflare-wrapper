@@ -1,0 +1,7 @@
+pipeline:
+  docker:
+    image: plugins/docker
+    repo: sammons/certbot-cloudflare-wrapper
+    dockerfile: Dockerfile
+    auto_tag: true
+    secrets: [docker_username, docker_password]
