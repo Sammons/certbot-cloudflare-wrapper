@@ -289,6 +289,7 @@ export class App {
                   timestamp: new Date().toISOString(),
                 };
                 await this.appendAction(action);
+                break;
               } catch (error) {
                 logger.error(`Failed to apply change to service ${serviceName}`);
               }
