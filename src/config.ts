@@ -25,7 +25,7 @@ const access = <T>(o: T, key: string) => {
 };
 
 const terminate = () => {
-  process.nextTick(process.exit, 1);
+  process.nextTick(process.exit, 1); // die after things can settle
 };
 
 export const config = {
@@ -36,6 +36,7 @@ export const config = {
   cloudflareKey: access(parsedConfig, 'cloudflareKey'),
   staging: access(parsedConfig, 'staging'),
 };
+
 const validate = () => {
   if (keysMissing.length > 0) {
     logger.error('Missing keys in the configuration!');

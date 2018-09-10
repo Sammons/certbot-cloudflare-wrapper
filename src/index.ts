@@ -1,3 +1,4 @@
+import 'source-map-support/register';
 import { App } from './app';
 import { logger } from './logging';
 logger.info('starting');

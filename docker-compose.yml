@@ -1,0 +1,20 @@
+version: '3.1'
+
+secrets:
+  XYZACT_external_secret_d6633798a945f7d21a0509662df018d7:
+    external: true
+
+services:
+  landing:
+    image: sammons/test-landing-page
+    secrets:
+      - XYZACT_external_secret_d6633798a945f7d21a0509662df018d7
+  test: 
+    image: sammons/certbot-cloudflare-wrapper:latest
+    network_mode: host
+    volumes:
+      - ./config.json:/app/config.json
+      - ./logs:/app/logs
+      - ./history:/app/history
+      - ./certs:/etc/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock
