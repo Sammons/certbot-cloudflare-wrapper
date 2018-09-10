@@ -116,7 +116,7 @@ export class App {
   // TODO: update affected services with those secrets
 
   public async extractSecrets(domain: string) {
-    const prefix = crypto.randomBytes(3).toString('hex');
+    const prefix = crypto.randomBytes(3).toString('hex').toUpperCase();
     const crtSuffix = this.md5(`${domain}.crt`);
     const pemSuffix = this.md5(`${domain}.pem`);
     const domainDir = `/etc/letsencrypt/live/${domain}`;
