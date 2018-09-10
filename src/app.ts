@@ -267,13 +267,15 @@ export class App {
             }
           });
           if (somethingUpdated) {
-            logger.info(`Attempting to apply the modifications, changing service at version ${service.Version.Index}`);
             const attemptUpdate = async () => {
+              logger.info(
+                `Attempting to apply the modifications, changing service at version ${service.Version.Index}`,
+              );
               const latestService = await this.dockerode.getService(service.ID).inspect();
               latestService.Spec.TaskTemplate.ContainerSpec.Secrets = secrets;
               await this.dockerode.getService(service.ID).update({
                 ...latestService.Spec,
-                version: Number(service.Version.Index),
+                version: Number(latestService.Version.Index),
               });
               logger.info(`Updated service ${serviceName}`);
             };
