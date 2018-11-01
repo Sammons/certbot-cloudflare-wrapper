@@ -136,10 +136,10 @@ export class App {
     }
     const crtStats = await fsp.stat(crtPath);
     // check if cert created in the last 5 minutes
-    if ((new Date().getTime() - crtStats.ctime.getTime()) > (1000 * 60 * 5)) {
-      logger.info(`Skipping creating a new secret for ${domain} since the cert is not new`);
-      return;
-    }
+    // if ((new Date().getTime() - crtStats.ctime.getTime()) > (1000 * 60 * 5)) {
+    //   logger.info(`Skipping creating a new secret for ${domain} since the cert is not new`);
+    //   return;
+    // }
     const crt = await fsp.readFile(crtPath);
     const pem = await fsp.readFile(pemPath);
     const crtSecretName = `${prefix}_external_secret_${crtSuffix}`;
