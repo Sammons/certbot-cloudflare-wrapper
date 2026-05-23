@@ -25,7 +25,7 @@
   "license": "MIT",
   "dependencies": {
     "dockerode": "^2.5.6",
-    "express": "^4.22.1",
+    "express": "^4.22.2",
     "lodash": "^4.17.23",
     "sammons-logger": "^1.0.2",
     "source-map-support": "^0.5.9"
